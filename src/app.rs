@@ -11,6 +11,7 @@ pub struct TemplateApp {
     price_base: u32,
     price_pow: u32,
     mode: u16,
+    amount: usize,
     encoded_string: String,
     encode_status: String,
     decode_status: String,
@@ -21,10 +22,11 @@ impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            owner_script_hash: "0x".to_owned(),
+            owner_script_hash: "0x00000000000000000000000000000000".to_owned(),
             mode: 0,
             price_base: 1,
             price_pow: 0,
+            amount: 1,
             encoded_string: "0x".to_owned(),
             encode_status: "".to_owned(),
             decode_status: "".to_owned(),
@@ -135,7 +137,33 @@ impl eframe::App for TemplateApp {
                     ui.horizontal(|ui| {
                         ui.label("Mode");
                         ui.add(egui::widgets::Slider::new(&mut self.mode, 0..=2));
+                        match self.mode {
+                            0 => {
+                                ui.label(egui::RichText::new("UDT compatible mode").color(egui::Color32::YELLOW).background_color(egui::Color32::GRAY));
+                            }
+                            1 => {
+                                ui.label(egui::RichText::new("Restrict Mode, Can't modify Data/Type during trade.").color(egui::Color32::YELLOW).background_color(egui::Color32::GRAY));
+                                
+                            }
+                            2 => {
+                                ui.label(egui::RichText::new("Partial Restrict Mode, Can't modify Type during trade, but Data can.").color(egui::Color32::YELLOW).background_color(egui::Color32::GRAY));
+                            }
+                            _ => {}
+                        }
                     });
+
+                    if self.mode == 0 {
+                        ui.horizontal(|ui| {
+                            ui.label("Amount");
+                            ui.add(egui::widgets::Slider::new(&mut self.amount, 1..=usize::MAX));
+                            ui.separator();
+                            ui.label("Data: ");
+                            let fixed = (self.amount as u128).to_le_bytes();
+                            let data = hex::encode(fixed);
+
+                            ui.label(egui::RichText::new(format!("0x{}", data)));
+                        });
+                    }
 
                     ui.horizontal(|ui| {
                         ui.label("Owner LockScript Hash");
@@ -253,6 +281,8 @@ impl eframe::App for TemplateApp {
             });
             ui.separator();
             current_contract_info(ui, &self.encoded_string);
+            ui.separator();
+            current_encode_method(ui, &self);
             powered_by_egui_and_eframe(ui);
         });
     }
@@ -261,6 +291,167 @@ enum DexHelperError {
     LockScriptHashError,
     ModeTooBig,
     ArgsLenError,
+}
+
+fn current_encode_method(ui: &mut egui::Ui, app: &TemplateApp) {
+    ui.horizontal(|ui| {
+        ui.heading(
+            egui::RichText::new("Please check current encode method")
+                .color(egui::Color32::LIGHT_YELLOW),
+        );
+        ui.heading(
+            egui::RichText::new("(using current example):").color(egui::Color32::LIGHT_BLUE),
+        );
+    });
+    ui.horizontal(|ui| {
+        ui.label("First 2 bytes(le_bytes): mode ");
+        ui.separator();
+        ui.label(egui::RichText::new(format!(
+            "{}.to_le_bytes() = {:?}",
+            app.mode,
+            app.mode.to_le_bytes()
+        )));
+        if ui
+            .label(
+                egui::RichText::new(format!(
+                    "0x{:x}{:x}",
+                    app.mode.to_le_bytes()[0],
+                    app.mode.to_le_bytes()[1]
+                ))
+                .color(egui::Color32::LIGHT_GREEN)
+                .background_color(egui::Color32::BLACK),
+            )
+            .on_hover_text("Click to copy")
+            .clicked()
+        {
+            ui.output_mut(|o| {
+                o.copied_text = format!(
+                    "0x{:x}{:x}",
+                    app.mode.to_le_bytes()[0],
+                    app.mode.to_le_bytes()[1]
+                );
+            });
+        }
+    });
+
+    ui.horizontal(|ui| {
+        let original_space = ui.spacing().item_spacing.x;
+        ui.spacing_mut().item_spacing.x = 0.0;
+        ui.label("Next ");
+        ui.label(egui::RichText::new("32").color(egui::Color32::LIGHT_YELLOW));
+        ui.label(" bytes: owner_script_hash ");
+
+        ui.spacing_mut().item_spacing.x = original_space;
+        ui.separator();
+        if ui
+            .label(
+                egui::RichText::new(app.owner_script_hash.clone())
+                    .color(egui::Color32::LIGHT_GREEN)
+                    .background_color(egui::Color32::BLACK),
+            )
+            .on_hover_text("Click to copy")
+            .clicked()
+        {
+            ui.output_mut(|o| {
+                o.copied_text = app.owner_script_hash.clone();
+            });
+        }
+    });
+
+    ui.horizontal(|ui| {
+        ui.label("Next 4 bytes(le_bytes): price_base ");
+        ui.separator();
+        ui.label(egui::RichText::new(format!(
+            "{}.to_le_bytes() = {:?}",
+            app.price_base,
+            app.price_base.to_le_bytes()
+        )));
+        if ui
+            .label(
+                egui::RichText::new(format!(
+                    "0x{:x}{:x}{:x}{:x}",
+                    app.price_base.to_le_bytes()[0],
+                    app.price_base.to_le_bytes()[1],
+                    app.price_base.to_le_bytes()[2],
+                    app.price_base.to_le_bytes()[3]
+                ))
+                .color(egui::Color32::LIGHT_GREEN)
+                .background_color(egui::Color32::BLACK),
+            )
+            .on_hover_text("Click to copy")
+            .clicked()
+        {
+            ui.output_mut(|o| {
+                o.copied_text = format!(
+                    "0x{:x}{:x}{:x}{:x}",
+                    app.price_base.to_le_bytes()[0],
+                    app.price_base.to_le_bytes()[1],
+                    app.price_base.to_le_bytes()[2],
+                    app.price_base.to_le_bytes()[3]
+                );
+            });
+        }
+    });
+
+    ui.horizontal(|ui| {
+        ui.label("Last 4 bytes(le_bytes): price_pow ");
+        ui.separator();
+        ui.label(egui::RichText::new(format!(
+            "{}.to_le_bytes() = {:?}",
+            app.price_pow,
+            app.price_pow.to_le_bytes()
+        )));
+        if ui
+            .label(
+                egui::RichText::new(format!(
+                    "0x{:x}{:x}{:x}{:x}",
+                    app.price_pow.to_le_bytes()[0],
+                    app.price_pow.to_le_bytes()[1],
+                    app.price_pow.to_le_bytes()[2],
+                    app.price_pow.to_le_bytes()[3]
+                ))
+                .color(egui::Color32::LIGHT_GREEN)
+                .background_color(egui::Color32::BLACK),
+            )
+            .on_hover_text("Click to copy")
+            .clicked()
+        {
+            ui.output_mut(|o| {
+                o.copied_text = format!(
+                    "0x{:x}{:x}{:x}{:x}",
+                    app.price_pow.to_le_bytes()[0],
+                    app.price_pow.to_le_bytes()[1],
+                    app.price_pow.to_le_bytes()[2],
+                    app.price_pow.to_le_bytes()[3]
+                );
+            });
+        }
+    });
+
+    ui.horizontal(|ui| {
+        ui.label("Total price will be:");
+        ui.separator();
+        let total = match app.mode {
+            0 => app.amount as u128 * app.price_base as u128 * 10u128.pow(app.price_pow),
+            _ => app.price_base as u128 * 10u128.pow(app.price_pow),
+        };
+        let ckb_cap = total as f64 / 1000_0000.0;
+
+        if app.mode == 0 {
+            ui.label(egui::RichText::new(format!(
+                "{} * {} * 10^{} = {} Shannons",
+                app.amount, app.price_base, app.price_pow, total,
+            )));
+        } else {
+            ui.label(egui::RichText::new(format!(
+                "{} * 10^{} = {} Shannons",
+                app.price_base, app.price_pow, total,
+            )));
+        }
+        ui.separator();
+        ui.label(egui::RichText::new(format!("{} CKB", ckb_cap)));
+        let total_le = total.to_le_bytes();
+    });
 }
 
 fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {

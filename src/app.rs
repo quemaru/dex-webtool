@@ -1,20 +1,34 @@
+use egui::TextBuffer;
+use log::log;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     // Example stuff:
-    label: String,
-
     #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+    owner_script_hash: String,
+    price_base: u32,
+    price_pow: u32,
+    mode: u16,
+    encoded_string: String,
+    encode_status: String,
+    decode_status: String,
+    last_status: bool,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
+            owner_script_hash: "0x".to_owned(),
+            mode: 0,
+            price_base: 1,
+            price_pow: 0,
+            encoded_string: "0x".to_owned(),
+            encode_status: "".to_owned(),
+            decode_status: "".to_owned(),
+            last_status: true,
         }
     }
 }
@@ -32,6 +46,54 @@ impl TemplateApp {
         }
 
         Default::default()
+    }
+
+    fn decode(&mut self) -> Result<(), DexHelperError> {
+        let args = self
+            .encoded_string
+            .strip_prefix("0x")
+            .unwrap_or(&self.encoded_string);
+        if args.len() != 42 {
+            return Err(DexHelperError::ArgsLenError);
+        }
+        let mode_bytes = [
+            u8::from_str_radix(args.char_range(0..1), 16).unwrap(),
+            u8::from_str_radix(args.char_range(1..2), 16).unwrap(),
+        ];
+        let mode = u16::from_le_bytes(mode_bytes);
+        if mode > 2 {
+            return Err(DexHelperError::ModeTooBig);
+        }
+        self.mode = mode;
+        let owner_script_hash = &args[2..34];
+        self.owner_script_hash = format!("0x{}", owner_script_hash);
+        println!("mode: {}, owner_script_hash: {}", mode, owner_script_hash);
+        Ok(())
+    }
+
+    fn encode(&mut self) -> Result<String, DexHelperError> {
+        let mut encoded = "0x".to_owned();
+        let mode_bytes = self.mode.to_le_bytes();
+        encoded.push_str(&format!("{:x}{:x}", mode_bytes[0], mode_bytes[1]));
+        let owner_script_hash = self
+            .owner_script_hash
+            .strip_prefix("0x")
+            .unwrap_or(self.owner_script_hash.as_str());
+        if owner_script_hash.len() != 32 {
+            return Err(DexHelperError::LockScriptHashError);
+        }
+        encoded.push_str(owner_script_hash);
+        let price_base_bytes = self.price_base.to_le_bytes();
+        encoded.push_str(&format!(
+            "{:x}{:x}{:x}{:x}",
+            price_base_bytes[0], price_base_bytes[1], price_base_bytes[2], price_base_bytes[3]
+        ));
+        let price_pow_bytes = self.price_pow.to_le_bytes();
+        encoded.push_str(&format!(
+            "{:x}{:x}{:x}{:x}",
+            price_pow_bytes[0], price_pow_bytes[1], price_pow_bytes[2], price_pow_bytes[3]
+        ));
+        Ok(encoded)
     }
 }
 
@@ -64,34 +126,201 @@ impl eframe::App for TemplateApp {
                 egui::widgets::global_dark_light_mode_buttons(ui);
             });
         });
-
         egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
-
             ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
+                ui.vertical(|ui| {
+                    // The central panel the region left after adding TopPanel's and SidePanel's
+                    ui.heading("Dex Lock Args Encode/Decode Helper");
+
+                    ui.horizontal(|ui| {
+                        ui.label("Mode");
+                        ui.add(egui::widgets::Slider::new(&mut self.mode, 0..=2));
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label("Owner LockScript Hash");
+                        ui.add_sized(
+                            ui.available_size() / 2.5,
+                            egui::TextEdit::singleline(&mut self.owner_script_hash),
+                        );
+                    });
+
+                    ui.horizontal(|ui| {
+                        if ui.button("Encode").clicked() {
+                            match self.encode() {
+                                Ok(encoded) => {
+                                    self.encoded_string = encoded;
+                                    self.encode_status = "".to_string();
+                                }
+                                Err(e) => match e {
+                                    DexHelperError::LockScriptHashError => {
+                                        self.encode_status =
+                                            "LockScript Hash Len Error!!!Must Be 32 bytes!"
+                                                .to_string();
+                                    }
+                                    _ => {
+                                        unreachable!();
+                                    }
+                                },
+                            }
+                        }
+                        if ui.button("Copy").clicked() {
+                            ui.output_mut(|o| {
+                                o.copied_text = self.owner_script_hash.clone();
+                            });
+                            self.encode_status = "Owner Script Hash Copied".to_string();
+                        }
+                    });
+
+                    ui.label(egui::RichText::new(&self.encode_status).color(
+                        if self.encode_status.is_empty() {
+                            egui::Color32::WHITE
+                        } else {
+                            egui::Color32::RED
+                        },
+                    ));
+                    ui.label("Price Base:");
+                    ui.add(egui::widgets::Slider::new(
+                        &mut self.price_base,
+                        1..=u32::MAX,
+                    ));
+                    ui.label("Price Pow:");
+                    ui.add(egui::widgets::Slider::new(
+                        &mut self.price_pow,
+                        0..=u32::MAX,
+                    ));
+                });
+                ui.separator();
+                ui.vertical(|ui| {
+                    ui.heading("Output");
+                    ui.horizontal(|ui| {
+                        ui.heading("Encoded Args");
+                        ui.add_sized(
+                            ui.available_size(),
+                            egui::TextEdit::singleline(&mut self.encoded_string),
+                        );
+                    });
+
+                    let color = if self.last_status {
+                        egui::Color32::GREEN
+                    } else {
+                        egui::Color32::RED
+                    };
+                    ui.horizontal(|ui| {
+                        if ui
+                            .button("Decode")
+                            .on_hover_text("Decode the encoded args")
+                            .clicked()
+                        {
+                            let result: Result<(), DexHelperError> = self.decode();
+                            self.last_status = result.is_ok().clone();
+
+                            if result.is_err() {
+                                self.decode_status = "Decode Error!!!".to_string();
+                                match result.unwrap_err() {
+                                    DexHelperError::ModeTooBig => {
+                                        self.decode_status.push_str("Mode too big!");
+                                    }
+                                    DexHelperError::ArgsLenError => {
+                                        self.decode_status.push_str(
+                                            format!(
+                                                "Args Len Error!!!Must Be 42 bytes, but got {}",
+                                                self.encoded_string
+                                                    .strip_prefix("0x")
+                                                    .unwrap_or(self.encoded_string.as_str())
+                                                    .len()
+                                            )
+                                            .as_str(),
+                                        );
+                                    }
+                                    _ => {}
+                                }
+                            } else {
+                                self.decode_status = "Okay".to_string();
+                            }
+                        }
+
+                        if ui.button("Copy").clicked() {
+                            ui.output_mut(|o| {
+                                o.copied_text = self.encoded_string.clone();
+                            });
+                            self.decode_status = "Copied".to_string();
+                        }
+                    });
+
+                    ui.label(egui::RichText::new(&self.decode_status).color(color));
+                })
             });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
-            }
-
             ui.separator();
-
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/main/",
-                "Source code."
-            ));
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
-            });
+            current_contract_info(ui, &self.encoded_string);
+            powered_by_egui_and_eframe(ui);
         });
     }
+}
+enum DexHelperError {
+    LockScriptHashError,
+    ModeTooBig,
+    ArgsLenError,
+}
+
+fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
+    ui.horizontal(|ui| {
+        ui.text_style_height(&egui::style::TextStyle::Heading);
+        ui.heading("Current Contract: ");
+        ui.hyperlink_to(egui::RichText::heading("transaction".into()), "https://pudge.explorer.nervos.org/transaction/0x9cd3316ab4306deacb8cc6c22180c9ad626ffa0ddbc5eb84fdd078e541815db2");
+    });
+    ui.separator();
+    ui.vertical(|ui| {
+        ui.heading("How to Set Cell's lock: ");
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.label(egui::RichText::new("codeHash:").color(egui::Color32::LIGHT_BLUE));
+            if ui
+                .label(
+                    egui::RichText::new(
+                        "0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f",
+                    )
+                    .color(egui::Color32::LIGHT_GREEN)
+                    .background_color(egui::Color32::BLACK),
+                )
+                .on_hover_text("Click to copy codeHash")
+                .clicked()
+            {
+                // copy code_hash
+                ui.output_mut(|o| {
+                    o.copied_text =
+                        "0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f"
+                            .to_owned()
+                })
+            };
+        });
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.label(egui::RichText::new("hashType:").color(egui::Color32::LIGHT_BLUE));
+            ui.label(
+                egui::RichText::new("data1")
+                    .color(egui::Color32::LIGHT_GREEN)
+                    .background_color(egui::Color32::BLACK),
+            );
+        });
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 10.0;
+            ui.label(egui::RichText::new("args:").color(egui::Color32::LIGHT_BLUE));
+            if ui
+                .label(
+                    egui::RichText::new(encoded_args)
+                        .color(egui::Color32::LIGHT_GREEN)
+                        .background_color(egui::Color32::BLACK),
+                )
+                .on_hover_text("Click to copy args")
+                .clicked()
+            {
+                // copy code_hash
+                ui.output_mut(|o| o.copied_text = encoded_args.to_owned());
+            };
+        });
+    });
+    ui.separator();
 }
 
 fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {

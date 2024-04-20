@@ -1,4 +1,3 @@
-use egui::TextBuffer;
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -21,7 +20,8 @@ impl Default for TemplateApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            owner_script_hash: "0x00000000000000000000000000000000".to_owned(),
+            owner_script_hash: "0x331397f34ece2aea6d4b692ab340dcd1a02f6a64ccbee4c3613ada390dc4714f"
+                .to_owned(),
             mode: 0,
             price_base: 1,
             price_pow: 0,
@@ -51,61 +51,41 @@ impl TemplateApp {
     }
 
     fn decode(&mut self) -> Result<(), DexHelperError> {
-        let args = self
+        let args_str = self
             .encoded_string
             .strip_prefix("0x")
             .unwrap_or(&self.encoded_string);
+        let args = hex::decode(args_str).map_err(|_| DexHelperError::ArgsDecodeError)?;
         if args.len() != 42 {
             return Err(DexHelperError::ArgsLenError);
         }
-        let mode_bytes = [
-            u8::from_str_radix(args.char_range(0..1), 16).unwrap(),
-            u8::from_str_radix(args.char_range(1..2), 16).unwrap(),
-        ];
+        let mode_bytes = [args[0], args[1]];
         let mode = u16::from_le_bytes(mode_bytes);
         if mode > 2 {
             return Err(DexHelperError::ModeTooBig);
         }
         self.mode = mode;
         let owner_script_hash = &args[2..34];
-        self.owner_script_hash = format!("0x{}", owner_script_hash);
-        println!("mode: {}, owner_script_hash: {}", mode, owner_script_hash);
+        self.owner_script_hash = format!("0x{}", hex::encode(owner_script_hash));
         Ok(())
     }
 
     fn encode(&mut self) -> Result<String, DexHelperError> {
         let mut encoded = "0x".to_owned();
-        let mode_bytes = self.mode.to_le_bytes();
-        encoded.push_str(&format!("{:x}{:x}", mode_bytes[0], mode_bytes[1]));
-        let owner_script_hash = self
+        let owner_script_hash_str = self
             .owner_script_hash
             .strip_prefix("0x")
             .unwrap_or(self.owner_script_hash.as_str());
+        let owner_script_hash =
+            hex::decode(owner_script_hash_str).map_err(|_| DexHelperError::LockScriptHashError)?;
         if owner_script_hash.len() != 32 {
             return Err(DexHelperError::LockScriptHashError);
         }
-
-        encoded.push_str(owner_script_hash);
-        let price_bytes = self.price_base.to_le_bytes();
-        encoded.push_str(&format!(
-            "{:02x}",
-            u16::from_ne_bytes([price_bytes[0], price_bytes[1]])
-        ));
-        encoded.push_str(&format!(
-            "{:02x}",
-            u16::from_ne_bytes([price_bytes[1], price_bytes[2]])
-        ));
-
-        let price_pow_bytes = self.price_pow.to_le_bytes();
-        encoded.push_str(&format!(
-            "{:02x}",
-            u16::from_ne_bytes([price_pow_bytes[0], price_pow_bytes[1]])
-        ));
-
-        encoded.push_str(&format!(
-            "{:02x}",
-            u16::from_ne_bytes([price_pow_bytes[1], price_pow_bytes[2]])
-        ));
+        let mode = hex::encode(self.mode.to_le_bytes());
+        encoded.push_str(mode.as_str());
+        encoded.push_str(owner_script_hash_str);
+        encoded.push_str(hex::encode(self.price_base.to_le_bytes()).as_str());
+        encoded.push_str(hex::encode(self.price_pow.to_le_bytes()).as_str());
 
         Ok(encoded)
     }
@@ -200,7 +180,10 @@ impl eframe::App for TemplateApp {
                                         self.encode_status =
                                             "LockScript Hash Len Error!!!Must Be 32 bytes!"
                                                 .to_string();
-                                    }
+                                    },
+                                    DexHelperError::ArgsDecodeError => {
+                                        self.encode_status = "Args Decode Error!!!".to_string();
+                                    },
                                     _ => {
                                         unreachable!();
                                     }
@@ -306,6 +289,7 @@ impl eframe::App for TemplateApp {
     }
 }
 enum DexHelperError {
+    ArgsDecodeError,
     LockScriptHashError,
     ModeTooBig,
     ArgsLenError,
@@ -332,7 +316,7 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
         if ui
             .label(
                 egui::RichText::new(format!(
-                    "0x{:x}{:x}",
+                    "0x{:02x}{:02x}",
                     app.mode.to_le_bytes()[0],
                     app.mode.to_le_bytes()[1]
                 ))
@@ -344,7 +328,7 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
         {
             ui.output_mut(|o| {
                 o.copied_text = format!(
-                    "0x{:x}{:x}",
+                    "0x{:02x}{:02x}",
                     app.mode.to_le_bytes()[0],
                     app.mode.to_le_bytes()[1]
                 );
@@ -380,32 +364,22 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
         ui.label("Next 4 bytes(le_bytes): price_base ");
         ui.separator();
         ui.label(egui::RichText::new(format!(
-            "{}.to_le_bytes() = {:?}",
+            "{}.to_le_bytes() = {}",
             app.price_base,
-            app.price_base.to_le_bytes()
+            hex::encode(app.price_base.to_le_bytes())
         )));
-
-        let price_bytes = app.price_base.to_le_bytes();
 
         if ui
             .label(
-                egui::RichText::new(format!(
-                    "0x{:02x}{:02x}",
-                    u16::from_ne_bytes([price_bytes[0], price_bytes[1]]),
-                    u16::from_ne_bytes([price_bytes[1], price_bytes[2]])
-                ))
-                .color(egui::Color32::LIGHT_GREEN)
-                .background_color(egui::Color32::BLACK),
+                egui::RichText::new(hex::encode(app.price_base.to_le_bytes()).to_string())
+                    .color(egui::Color32::LIGHT_GREEN)
+                    .background_color(egui::Color32::BLACK),
             )
             .on_hover_text("Click to copy")
             .clicked()
         {
             ui.output_mut(|o| {
-                o.copied_text = format!(
-                    "0x{:02x}{:02x}",
-                    u16::from_ne_bytes([price_bytes[0], price_bytes[1]]),
-                    u16::from_ne_bytes([price_bytes[1], price_bytes[2]])
-                );
+                o.copied_text = hex::encode(app.price_base.to_le_bytes()).to_string();
             });
         }
     });
@@ -418,27 +392,17 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
             app.price_pow,
             app.price_pow.to_le_bytes()
         )));
-
-        let price_pow_bytes = app.price_pow.to_le_bytes();
         if ui
             .label(
-                egui::RichText::new(format!(
-                    "0x{:02x}{:02x}",
-                    u16::from_ne_bytes([price_pow_bytes[0], price_pow_bytes[1]]),
-                    u16::from_ne_bytes([price_pow_bytes[1], price_pow_bytes[2]])
-                ))
-                .color(egui::Color32::LIGHT_GREEN)
-                .background_color(egui::Color32::BLACK),
+                egui::RichText::new(hex::encode(app.price_pow.to_le_bytes()).to_string())
+                    .color(egui::Color32::LIGHT_GREEN)
+                    .background_color(egui::Color32::BLACK),
             )
             .on_hover_text("Click to copy")
             .clicked()
         {
             ui.output_mut(|o| {
-                o.copied_text = format!(
-                    "0x{:02x}{:02x}",
-                    u16::from_ne_bytes([price_pow_bytes[0], price_pow_bytes[1]]),
-                    u16::from_ne_bytes([price_pow_bytes[1], price_pow_bytes[2]])
-                )
+                o.copied_text = hex::encode(app.price_pow.to_le_bytes()).to_string();
             });
         }
     });
@@ -473,7 +437,10 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
     ui.horizontal(|ui| {
         ui.text_style_height(&egui::style::TextStyle::Heading);
         ui.heading("Current Contract: ");
-        ui.hyperlink_to(egui::RichText::heading("transaction".into()), "https://pudge.explorer.nervos.org/transaction/0x9cd3316ab4306deacb8cc6c22180c9ad626ffa0ddbc5eb84fdd078e541815db2");
+        ui.hyperlink_to(
+            egui::RichText::heading("transaction".into()),
+            "0x80532b8f242e772012f98d80099b6b08cb712cb331610a8efcc589435c6f6281",
+        );
     });
     ui.vertical(|ui| {
         ui.heading("How to Set Cell's lock: ");
@@ -483,7 +450,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
             if ui
                 .label(
                     egui::RichText::new(
-                        "0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f",
+                        "0x3aab2ceaf418f9199141295f830c2d2576d96425d84d5637dd4c7d67761ecf1e",
                     )
                     .color(egui::Color32::LIGHT_GREEN)
                     .background_color(egui::Color32::BLACK),
@@ -494,7 +461,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
                 // copy code_hash
                 ui.output_mut(|o| {
                     o.copied_text =
-                        "0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f"
+                        "0x3aab2ceaf418f9199141295f830c2d2576d96425d84d5637dd4c7d67761ecf1e"
                             .to_owned()
                 })
             };
@@ -540,7 +507,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
         );
         let text = r#"{
            "out_point":{
-              "tx_hash":"0x9cd3316ab4306deacb8cc6c22180c9ad626ffa0ddbc5eb84fdd078e541815db2",
+              "tx_hash":"0x80532b8f242e772012f98d80099b6b08cb712cb331610a8efcc589435c6f6281",
               "index":"0x0"
            },
            "dep_type":"code"
@@ -584,7 +551,7 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     }
                     ui.label(egui::RichText::new("    - Type: <USER_DEFINED> (Should be same with original)").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
-                    ui.label(egui::RichText::new("            codeHash: 0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0x3aab2ceaf418f9199141295f830c2d2576d96425d84d5637dd4c7d67761ecf1e").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
                     ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
                 });
@@ -602,7 +569,7 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     ui.label(egui::RichText::new("    - Capacity: N").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Type: <USER_DEFINED>").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
-                    ui.label(egui::RichText::new("            codeHash: 0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0x3aab2ceaf418f9199141295f830c2d2576d96425d84d5637dd4c7d67761ecf1e").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
                     ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("  <Other Cells...(Payment Input)>").color(egui::Color32::LIGHT_GREEN));
@@ -634,7 +601,7 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     }
                     ui.label(egui::RichText::new("    - Type: <USER_DEFINED> (Should be same with original)").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
-                    ui.label(egui::RichText::new("            codeHash: 0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0x3aab2ceaf418f9199141295f830c2d2576d96425d84d5637dd4c7d67761ecf1e").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
                     ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("  Orignal Cell:").color(egui::Color32::LIGHT_GREEN));

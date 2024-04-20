@@ -1,5 +1,5 @@
 use egui::TextBuffer;
-use log::log;
+
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -241,7 +241,7 @@ impl eframe::App for TemplateApp {
                             .clicked()
                         {
                             let result: Result<(), DexHelperError> = self.decode();
-                            self.last_status = result.is_ok().clone();
+                            self.last_status = result.is_ok();
 
                             if result.is_err() {
                                 self.decode_status = "Decode Error!!!".to_string();
@@ -282,7 +282,7 @@ impl eframe::App for TemplateApp {
             ui.separator();
             current_contract_info(ui, &self.encoded_string);
             ui.separator();
-            current_encode_method(ui, &self);
+            current_encode_method(ui, self);
             powered_by_egui_and_eframe(ui);
         });
     }
@@ -450,7 +450,7 @@ fn current_encode_method(ui: &mut egui::Ui, app: &TemplateApp) {
         }
         ui.separator();
         ui.label(egui::RichText::new(format!("{} CKB", ckb_cap)));
-        let total_le = total.to_le_bytes();
+        let _total_le = total.to_le_bytes();
     });
 }
 

@@ -1,5 +1,4 @@
 use egui::TextBuffer;
-
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -85,13 +84,29 @@ impl TemplateApp {
         if owner_script_hash.len() != 32 {
             return Err(DexHelperError::LockScriptHashError);
         }
+
         encoded.push_str(owner_script_hash);
-        for i in self.price_base.to_le_bytes().iter() {
-            encoded.push(char::from_digit(*i as u32, 16).unwrap_or_default());
-        }
-        for i in self.price_pow.to_le_bytes().iter() {
-            encoded.push(char::from_digit(*i as u32, 16).unwrap_or_default());
-        }
+        let price_bytes = self.price_base.to_le_bytes();
+        encoded.push_str(&format!(
+            "{:02x}",
+            u16::from_ne_bytes([price_bytes[0], price_bytes[1]])
+        ));
+        encoded.push_str(&format!(
+            "{:02x}",
+            u16::from_ne_bytes([price_bytes[1], price_bytes[2]])
+        ));
+
+        let price_pow_bytes = self.price_pow.to_le_bytes();
+        encoded.push_str(&format!(
+            "{:02x}",
+            u16::from_ne_bytes([price_pow_bytes[0], price_pow_bytes[1]])
+        ));
+
+        encoded.push_str(&format!(
+            "{:02x}",
+            u16::from_ne_bytes([price_pow_bytes[1], price_pow_bytes[2]])
+        ));
+
         Ok(encoded)
     }
 }
@@ -369,14 +384,15 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
             app.price_base,
             app.price_base.to_le_bytes()
         )));
+
+        let price_bytes = app.price_base.to_le_bytes();
+
         if ui
             .label(
                 egui::RichText::new(format!(
-                    "0x{:x}{:x}{:x}{:x}",
-                    app.price_base.to_le_bytes()[0],
-                    app.price_base.to_le_bytes()[1],
-                    app.price_base.to_le_bytes()[2],
-                    app.price_base.to_le_bytes()[3]
+                    "0x{:02x}{:02x}",
+                    u16::from_ne_bytes([price_bytes[0], price_bytes[1]]),
+                    u16::from_ne_bytes([price_bytes[1], price_bytes[2]])
                 ))
                 .color(egui::Color32::LIGHT_GREEN)
                 .background_color(egui::Color32::BLACK),
@@ -386,11 +402,9 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
         {
             ui.output_mut(|o| {
                 o.copied_text = format!(
-                    "0x{:x}{:x}{:x}{:x}",
-                    app.price_base.to_le_bytes()[0],
-                    app.price_base.to_le_bytes()[1],
-                    app.price_base.to_le_bytes()[2],
-                    app.price_base.to_le_bytes()[3]
+                    "0x{:02x}{:02x}",
+                    u16::from_ne_bytes([price_bytes[0], price_bytes[1]]),
+                    u16::from_ne_bytes([price_bytes[1], price_bytes[2]])
                 );
             });
         }
@@ -404,14 +418,14 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
             app.price_pow,
             app.price_pow.to_le_bytes()
         )));
+
+        let price_pow_bytes = app.price_pow.to_le_bytes();
         if ui
             .label(
                 egui::RichText::new(format!(
-                    "0x{:x}{:x}{:x}{:x}",
-                    app.price_pow.to_le_bytes()[0],
-                    app.price_pow.to_le_bytes()[1],
-                    app.price_pow.to_le_bytes()[2],
-                    app.price_pow.to_le_bytes()[3]
+                    "0x{:02x}{:02x}",
+                    u16::from_ne_bytes([price_pow_bytes[0], price_pow_bytes[1]]),
+                    u16::from_ne_bytes([price_pow_bytes[1], price_pow_bytes[2]])
                 ))
                 .color(egui::Color32::LIGHT_GREEN)
                 .background_color(egui::Color32::BLACK),
@@ -421,12 +435,10 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
         {
             ui.output_mut(|o| {
                 o.copied_text = format!(
-                    "0x{:x}{:x}{:x}{:x}",
-                    app.price_pow.to_le_bytes()[0],
-                    app.price_pow.to_le_bytes()[1],
-                    app.price_pow.to_le_bytes()[2],
-                    app.price_pow.to_le_bytes()[3]
-                );
+                    "0x{:02x}{:02x}",
+                    u16::from_ne_bytes([price_pow_bytes[0], price_pow_bytes[1]]),
+                    u16::from_ne_bytes([price_pow_bytes[1], price_pow_bytes[2]])
+                )
             });
         }
     });

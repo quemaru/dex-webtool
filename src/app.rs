@@ -87,9 +87,15 @@ impl TemplateApp {
         }
         encoded.push_str(owner_script_hash);
         let price_base_bytes = self.price_base.to_le_bytes();
-        encoded.push_str(hex::encode(price_base_bytes).as_str());
+        encoded.push_str(&format!(
+            "{:x}{:x}{:x}{:x}",
+            price_base_bytes[0], price_base_bytes[1], price_base_bytes[2], price_base_bytes[3]
+        ));
         let price_pow_bytes = self.price_pow.to_le_bytes();
-        encoded.push_str(hex::encode(price_pow_bytes).as_str());
+        encoded.push_str(&format!(
+            "{:x}{:x}{:x}{:x}",
+            price_pow_bytes[0], price_pow_bytes[1], price_pow_bytes[2], price_pow_bytes[3]
+        ));
         Ok(encoded)
     }
 }

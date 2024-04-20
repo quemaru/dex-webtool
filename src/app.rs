@@ -16,6 +16,7 @@ pub struct TemplateApp {
     encode_status: String,
     decode_status: String,
     last_status: bool,
+    ckb_cap : f64,
 }
 
 impl Default for TemplateApp {
@@ -31,6 +32,7 @@ impl Default for TemplateApp {
             encode_status: "".to_owned(),
             decode_status: "".to_owned(),
             last_status: true,
+            ckb_cap: 0.0,
         }
     }
 }
@@ -283,6 +285,8 @@ impl eframe::App for TemplateApp {
             current_contract_info(ui, &self.encoded_string);
             ui.separator();
             current_encode_method(ui, self);
+            ui.separator();
+            how_to_build_transaction(ui, self);
             powered_by_egui_and_eframe(ui);
         });
     }
@@ -293,7 +297,7 @@ enum DexHelperError {
     ArgsLenError,
 }
 
-fn current_encode_method(ui: &mut egui::Ui, app: &TemplateApp) {
+fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
     ui.horizontal(|ui| {
         ui.heading(
             egui::RichText::new("Please check current encode method")
@@ -435,7 +439,7 @@ fn current_encode_method(ui: &mut egui::Ui, app: &TemplateApp) {
             0 => app.amount as u128 * app.price_base as u128 * 10u128.pow(app.price_pow),
             _ => app.price_base as u128 * 10u128.pow(app.price_pow),
         };
-        let ckb_cap = total as f64 / 1000_0000.0;
+        app.ckb_cap = total as f64 / 1000_0000.0;
 
         if app.mode == 0 {
             ui.label(egui::RichText::new(format!(
@@ -449,7 +453,7 @@ fn current_encode_method(ui: &mut egui::Ui, app: &TemplateApp) {
             )));
         }
         ui.separator();
-        ui.label(egui::RichText::new(format!("{} CKB", ckb_cap)));
+        ui.label(egui::RichText::new(format!("{} CKB", app.ckb_cap)));
         let _total_le = total.to_le_bytes();
     });
 }
@@ -460,7 +464,6 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
         ui.heading("Current Contract: ");
         ui.hyperlink_to(egui::RichText::heading("transaction".into()), "https://pudge.explorer.nervos.org/transaction/0x9cd3316ab4306deacb8cc6c22180c9ad626ffa0ddbc5eb84fdd078e541815db2");
     });
-    ui.separator();
     ui.vertical(|ui| {
         ui.heading("How to Set Cell's lock: ");
         ui.horizontal(|ui| {
@@ -526,6 +529,118 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
 }"#;
         ui.label(egui::RichText::new(text).color(egui::Color32::LIGHT_GREEN).background_color(egui::Color32::BLACK)).highlight().on_hover_text("Click to copy");
     });
+}
+
+fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
+    ui.label(egui::RichText::new("Bellow is instructions about how to build transaction:").color(egui::Color32::LIGHT_YELLOW));
+    ui.horizontal(|ui| {
+        ui.vertical_centered_justified(|ui|{
+            ui.horizontal(|ui| {
+                ui.label("1. If you want to make an offer:");
+                ui.separator();
+                ui.vertical(|ui| {
+                    ui.label(egui::RichText::new("Input:").color(egui::Color32::WHITE));
+                    ui.label(egui::RichText::new("  Orignal Cell:").color(egui::Color32::LIGHT_GREEN));
+                    if app.mode == 0 {
+                        ui.label(egui::RichText::new(format!("    - Data: 0x{}", hex::encode((app.amount as u128).to_le_bytes()))).color(egui::Color32::LIGHT_YELLOW));
+                    }
+                    ui.label(egui::RichText::new("    - Type: <USER_DEFINED>").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new(format!("    - Lock: <USER_DEFINED> (Lock.hash = {})", app.owner_script_hash)).color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("  <Other Cells...>").color(egui::Color32::LIGHT_GREEN));
+                });
+                ui.separator();
+                ui.vertical(|ui| {
+                    ui.label(egui::RichText::new("Output:").color(egui::Color32::WHITE));
+                    ui.label(egui::RichText::new("  Dex Locked Asset Cell:").color(egui::Color32::LIGHT_GREEN));
+                    if app.mode == 0 {
+                        ui.label(egui::RichText::new(format!("    - Data: 0x{}", hex::encode((app.amount as u128).to_le_bytes()))).color(egui::Color32::LIGHT_YELLOW));
+                    }
+                    ui.label(egui::RichText::new("    - Type: <USER_DEFINED> (Should be same with original)").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
+                    ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
+                });
+            });
+            ui.separator();
+        
+        
+            ui.horizontal(|ui| {
+                ui.label("2. If you want to take an offer:");
+                ui.separator();
+                ui.vertical(|ui| {
+                    ui.label(egui::RichText::new("Input:").color(egui::Color32::WHITE));
+                    ui.label(egui::RichText::new("  Dex Locked Asset Cell:").color(egui::Color32::LIGHT_GREEN));
+                    if app.mode == 0 {
+                        ui.label(egui::RichText::new(format!("    - Data: 0x{}", hex::encode((app.amount as u128).to_le_bytes()))).color(egui::Color32::LIGHT_YELLOW));
+                    }
+                    ui.label(egui::RichText::new("    - Capacity: N").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("    - Type: <USER_DEFINED>").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
+                    ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
+        
+                    ui.label(egui::RichText::new("  <Other Cells...(Payment Input)>").color(egui::Color32::LIGHT_GREEN));
+                });
+                ui.separator();
+                ui.vertical(|ui| {
+                    ui.label(egui::RichText::new("Output:").color(egui::Color32::WHITE));
+                    ui.label(egui::RichText::new("  Bought Asset Cell:").color(egui::Color32::LIGHT_GREEN));
+                    if app.mode == 0 {
+                        ui.label(egui::RichText::new(format!("    - Data: 0x{}", hex::encode((app.amount as u128).to_le_bytes()))).color(egui::Color32::LIGHT_YELLOW));
+                    }
+                    ui.label(egui::RichText::new("    - Type: <USER_DEFINED>  (Should be same with original)").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("    - Lock: <USER_DEFINED> (Buyer's lock)").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("  Orignal Owner Peyment Receive Cell:").color(egui::Color32::LIGHT_GREEN));
+                    ui.label(egui::RichText::new(format!("    - Capacity: N + {} CKB", app.ckb_cap)).color(egui::Color32::GREEN));
+                    ui.label(egui::RichText::new("    - Type: <USER_DEFINED>").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new(format!("    - Lock: <USER_DEFINED> (Lock.hash = {})", app.owner_script_hash)).color(egui::Color32::LIGHT_YELLOW));
+                });
+            });
+            ui.separator();
+        
+            ui.horizontal(|ui| {
+                ui.label("3. If you want to cancel an offer:");
+                ui.separator();
+                ui.vertical(|ui| {
+                    ui.label(egui::RichText::new("Input:").color(egui::Color32::WHITE));
+                    ui.label(egui::RichText::new("  Dex Locked Asset Cell:").color(egui::Color32::LIGHT_GREEN));
+                    if app.mode == 0 {
+                        ui.label(egui::RichText::new(format!("    - Data: 0x{}", hex::encode((app.amount as u128).to_le_bytes()))).color(egui::Color32::LIGHT_YELLOW));
+                    }
+                    ui.label(egui::RichText::new("    - Type: <USER_DEFINED> (Should be same with original)").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
+                    ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
+        
+                    ui.label(egui::RichText::new("  Orignal Cell:").color(egui::Color32::LIGHT_GREEN));
+                    if app.mode == 0 {
+                        ui.label(egui::RichText::new(format!("    - Data: 0x{}", hex::encode((app.amount as u128).to_le_bytes()))).color(egui::Color32::LIGHT_YELLOW));
+                    }
+                    ui.label(egui::RichText::new("    - Type: <USER_DEFINED>").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new(format!("    - Lock: <USER_DEFINED>\n(Lock.hash = {})", app.owner_script_hash)).color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("  <Other Cells...>").color(egui::Color32::LIGHT_GREEN));
+                });
+                ui.separator();
+                ui.vertical(|ui| {
+                    ui.label(egui::RichText::new("Output:").color(egui::Color32::WHITE));
+                    ui.label(egui::RichText::new("  Bought Asset Cell:").color(egui::Color32::LIGHT_GREEN));
+                    if app.mode == 0 {
+                        ui.label(egui::RichText::new(format!("    - Data: 0x{}", hex::encode((app.amount as u128).to_le_bytes()))).color(egui::Color32::LIGHT_YELLOW));
+                    }
+                    ui.label(egui::RichText::new("    - Type: <USER_DEFINED>").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("    - Lock: <USER_DEFINED> (Buyer's lock)").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("  Orignal Owner Peyment Receive Cell:").color(egui::Color32::LIGHT_GREEN));
+                    ui.label(egui::RichText::new("    - Type: <USER_DEFINED>").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new(format!("    - Lock: <USER_DEFINED>\n(Lock.hash = {})", app.owner_script_hash)).color(egui::Color32::LIGHT_YELLOW));
+                });
+            });
+        
+        });
+    });
+
 }
 
 fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {

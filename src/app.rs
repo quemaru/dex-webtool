@@ -86,16 +86,12 @@ impl TemplateApp {
             return Err(DexHelperError::LockScriptHashError);
         }
         encoded.push_str(owner_script_hash);
-        let price_base_bytes = self.price_base.to_le_bytes();
-        encoded.push_str(&format!(
-            "{:x}{:x}{:x}{:x}",
-            price_base_bytes[0], price_base_bytes[1], price_base_bytes[2], price_base_bytes[3]
-        ));
-        let price_pow_bytes = self.price_pow.to_le_bytes();
-        encoded.push_str(&format!(
-            "{:x}{:x}{:x}{:x}",
-            price_pow_bytes[0], price_pow_bytes[1], price_pow_bytes[2], price_pow_bytes[3]
-        ));
+        for i in self.price_base.to_le_bytes().iter() {
+            encoded.push(char::from_digit(*i as u32, 16).unwrap_or_default());
+        }
+        for i in self.price_pow.to_le_bytes().iter() {
+            encoded.push(char::from_digit(*i as u32, 16).unwrap_or_default());
+        }
         Ok(encoded)
     }
 }
@@ -219,7 +215,7 @@ impl eframe::App for TemplateApp {
                     ui.label("Price Pow:");
                     ui.add(egui::widgets::Slider::new(
                         &mut self.price_pow,
-                        0..=500,
+                        0..=15,
                     ));
                 });
                 ui.separator();

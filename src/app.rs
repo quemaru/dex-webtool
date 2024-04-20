@@ -439,7 +439,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
         ui.heading("Current Contract: ");
         ui.hyperlink_to(
             egui::RichText::heading("transaction".into()),
-            "0x80532b8f242e772012f98d80099b6b08cb712cb331610a8efcc589435c6f6281",
+            "https://pudge.explorer.nervos.org/transaction/0x20e4eaba5cc28607c2be8206619cd7b09ec123d2be9ddf2c75347fa52e9fc551",
         );
     });
     ui.vertical(|ui| {
@@ -450,7 +450,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
             if ui
                 .label(
                     egui::RichText::new(
-                        "0x3aab2ceaf418f9199141295f830c2d2576d96425d84d5637dd4c7d67761ecf1e",
+                        "0x099bca002d01cb130cdff036859d9782a682e0b41f7cbd096f236131308dd221",
                     )
                     .color(egui::Color32::LIGHT_GREEN)
                     .background_color(egui::Color32::BLACK),
@@ -461,7 +461,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
                 // copy code_hash
                 ui.output_mut(|o| {
                     o.copied_text =
-                        "0x3aab2ceaf418f9199141295f830c2d2576d96425d84d5637dd4c7d67761ecf1e"
+                        "0x099bca002d01cb130cdff036859d9782a682e0b41f7cbd096f236131308dd221"
                             .to_owned()
                 })
             };
@@ -507,7 +507,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
         );
         let text = r#"{
            "out_point":{
-              "tx_hash":"0x80532b8f242e772012f98d80099b6b08cb712cb331610a8efcc589435c6f6281",
+              "tx_hash":"0x20e4eaba5cc28607c2be8206619cd7b09ec123d2be9ddf2c75347fa52e9fc551",
               "index":"0x0"
            },
            "dep_type":"code"
@@ -551,7 +551,7 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     }
                     ui.label(egui::RichText::new("    - Type: <USER_DEFINED> (Should be same with original)").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
-                    ui.label(egui::RichText::new("            codeHash: 0x3aab2ceaf418f9199141295f830c2d2576d96425d84d5637dd4c7d67761ecf1e").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0x099bca002d01cb130cdff036859d9782a682e0b41f7cbd096f236131308dd221").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
                     ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
                 });
@@ -569,7 +569,7 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     ui.label(egui::RichText::new("    - Capacity: N").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Type: <USER_DEFINED>").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
-                    ui.label(egui::RichText::new("            codeHash: 0x3aab2ceaf418f9199141295f830c2d2576d96425d84d5637dd4c7d67761ecf1e").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0x099bca002d01cb130cdff036859d9782a682e0b41f7cbd096f236131308dd221").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
                     ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("  <Other Cells...(Payment Input)>").color(egui::Color32::LIGHT_GREEN));
@@ -601,7 +601,7 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     }
                     ui.label(egui::RichText::new("    - Type: <USER_DEFINED> (Should be same with original)").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
-                    ui.label(egui::RichText::new("            codeHash: 0x3aab2ceaf418f9199141295f830c2d2576d96425d84d5637dd4c7d67761ecf1e").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0x099bca002d01cb130cdff036859d9782a682e0b41f7cbd096f236131308dd221").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
                     ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("  Orignal Cell:").color(egui::Color32::LIGHT_GREEN));

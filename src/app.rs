@@ -11,7 +11,7 @@ pub struct TemplateApp {
     price_base: u32,
     price_pow: u32,
     mode: u16,
-    amount: usize,
+    amount: u64,
     encoded_string: String,
     encode_status: String,
     decode_status: String,
@@ -157,7 +157,7 @@ impl eframe::App for TemplateApp {
                     if self.mode == 0 {
                         ui.horizontal(|ui| {
                             ui.label("Amount");
-                            ui.add(egui::widgets::Slider::new(&mut self.amount, 1..=usize::MAX));
+                            ui.add(egui::widgets::Slider::new(&mut self.amount, 1..=u64::MAX));
                             ui.separator();
                             ui.label("Data: ");
                             let fixed = (self.amount as u128).to_le_bytes();

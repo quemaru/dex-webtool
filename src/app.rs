@@ -512,6 +512,20 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
         });
     });
     ui.separator();
+    ui.vertical(|ui| {
+        ui.text_style_height(&egui::style::TextStyle::Heading);
+        ui.heading(egui::RichText::new("Ensure to set CellDeps contains: ").color(egui::Color32::BROWN));
+        ui.label(egui::RichText::new("- Original Lock's script dep").color(egui::Color32::LIGHT_YELLOW));
+        ui.label(egui::RichText::new("- Dex Lock's script dep(showed as bellow)").color(egui::Color32::LIGHT_YELLOW));
+        let text = r#"{
+           "out_point":{
+              "tx_hash":"0x9cd3316ab4306deacb8cc6c22180c9ad626ffa0ddbc5eb84fdd078e541815db2",
+              "index":"0x0"
+           },
+           "dep_type":"code"
+}"#;
+        ui.label(egui::RichText::new(text).color(egui::Color32::LIGHT_GREEN).background_color(egui::Color32::BLACK)).highlight().on_hover_text("Click to copy");
+    });
 }
 
 fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {

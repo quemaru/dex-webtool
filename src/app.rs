@@ -123,7 +123,11 @@ impl eframe::App for TemplateApp {
                 egui::widgets::global_dark_light_mode_buttons(ui);
             });
         });
+
         egui::CentralPanel::default().show(ctx, |ui| {
+
+        egui::ScrollArea::vertical().show(ui, |ui| {
+
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     // The central panel the region left after adding TopPanel's and SidePanel's
@@ -280,6 +284,7 @@ impl eframe::App for TemplateApp {
             ui.separator();
             how_to_build_transaction(ui, self);
             powered_by_egui_and_eframe(ui);
+        });
         });
     }
 }

@@ -213,7 +213,7 @@ impl eframe::App for TemplateApp {
                     ui.label("Price Pow:");
                     ui.add(egui::widgets::Slider::new(
                         &mut self.price_pow,
-                        0..=u32::MAX,
+                        0..=500,
                     ));
                 });
                 ui.separator();

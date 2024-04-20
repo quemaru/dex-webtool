@@ -1,6 +1,5 @@
 use egui::TextBuffer;
 
-
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -16,7 +15,7 @@ pub struct TemplateApp {
     encode_status: String,
     decode_status: String,
     last_status: bool,
-    ckb_cap : f64,
+    ckb_cap: f64,
 }
 
 impl Default for TemplateApp {
@@ -145,7 +144,6 @@ impl eframe::App for TemplateApp {
                             }
                             1 => {
                                 ui.label(egui::RichText::new("Restrict Mode, Can't modify Data/Type during trade.").color(egui::Color32::YELLOW).background_color(egui::Color32::GRAY));
-                                
                             }
                             2 => {
                                 ui.label(egui::RichText::new("Partial Restrict Mode, Can't modify Type during trade, but Data can.").color(egui::Color32::YELLOW).background_color(egui::Color32::GRAY));
@@ -517,9 +515,16 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
     ui.separator();
     ui.vertical(|ui| {
         ui.text_style_height(&egui::style::TextStyle::Heading);
-        ui.heading(egui::RichText::new("Ensure to set CellDeps contains: ").color(egui::Color32::BROWN));
-        ui.label(egui::RichText::new("- Original Lock's script dep").color(egui::Color32::LIGHT_YELLOW));
-        ui.label(egui::RichText::new("- Dex Lock's script dep(showed as bellow)").color(egui::Color32::LIGHT_YELLOW));
+        ui.heading(
+            egui::RichText::new("Ensure to set CellDeps contains: ").color(egui::Color32::BROWN),
+        );
+        ui.label(
+            egui::RichText::new("- Original Lock's script dep").color(egui::Color32::LIGHT_YELLOW),
+        );
+        ui.label(
+            egui::RichText::new("- Dex Lock's script dep(showed as bellow)")
+                .color(egui::Color32::LIGHT_YELLOW),
+        );
         let text = r#"{
            "out_point":{
               "tx_hash":"0x9cd3316ab4306deacb8cc6c22180c9ad626ffa0ddbc5eb84fdd078e541815db2",
@@ -527,12 +532,21 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
            },
            "dep_type":"code"
 }"#;
-        ui.label(egui::RichText::new(text).color(egui::Color32::LIGHT_GREEN).background_color(egui::Color32::BLACK)).highlight().on_hover_text("Click to copy");
+        ui.label(
+            egui::RichText::new(text)
+                .color(egui::Color32::LIGHT_GREEN)
+                .background_color(egui::Color32::BLACK),
+        )
+        .highlight()
+        .on_hover_text("Click to copy");
     });
 }
 
 fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
-    ui.label(egui::RichText::new("Bellow is instructions about how to build transaction:").color(egui::Color32::LIGHT_YELLOW));
+    ui.label(
+        egui::RichText::new("Bellow is instructions about how to build transaction:")
+            .color(egui::Color32::LIGHT_YELLOW),
+    );
     ui.horizontal(|ui| {
         ui.vertical_centered_justified(|ui|{
             ui.horizontal(|ui| {
@@ -563,8 +577,6 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                 });
             });
             ui.separator();
-        
-        
             ui.horizontal(|ui| {
                 ui.label("2. If you want to take an offer:");
                 ui.separator();
@@ -580,7 +592,6 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     ui.label(egui::RichText::new("            codeHash: 0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
                     ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
-        
                     ui.label(egui::RichText::new("  <Other Cells...(Payment Input)>").color(egui::Color32::LIGHT_GREEN));
                 });
                 ui.separator();
@@ -599,7 +610,6 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                 });
             });
             ui.separator();
-        
             ui.horizontal(|ui| {
                 ui.label("3. If you want to cancel an offer:");
                 ui.separator();
@@ -614,7 +624,6 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     ui.label(egui::RichText::new("            codeHash: 0xcc62edd5c460ceda11b2b473102ac384e774491a4dfca267ea39af2075d2f70f").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
                     ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
-        
                     ui.label(egui::RichText::new("  Orignal Cell:").color(egui::Color32::LIGHT_GREEN));
                     if app.mode == 0 {
                         ui.label(egui::RichText::new(format!("    - Data: 0x{}", hex::encode((app.amount as u128).to_le_bytes()))).color(egui::Color32::LIGHT_YELLOW));
@@ -637,10 +646,8 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     ui.label(egui::RichText::new(format!("    - Lock: <USER_DEFINED>\n(Lock.hash = {})", app.owner_script_hash)).color(egui::Color32::LIGHT_YELLOW));
                 });
             });
-        
         });
     });
-
 }
 
 fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {

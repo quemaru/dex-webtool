@@ -415,14 +415,17 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
         ui.label("Total price will be:");
         ui.separator();
         let total = match app.mode {
-            0 => app.amount as u128 * app.price_base as u128 * 10u128.pow(app.price_pow),
-            _ => app.price_base as u128 * 10u128.pow(app.price_pow),
+            0 => {
+                app.amount as f64 * 10f64.powf(app.price_pow as f64) / 10f64.powf(8f64)
+                    * app.price_base as f64
+            }
+            _ => app.price_base as f64 * 10f64.powf(app.price_pow as f64),
         };
-        app.ckb_cap = total as f64 / 1000_0000.0;
+        app.ckb_cap = total / 1000_0000.0;
 
         if app.mode == 0 {
             ui.label(egui::RichText::new(format!(
-                "{} * {} * 10^{} = {} Shannons",
+                "{} * {} * 10^{} / 10 ^ 8 = {} Shannons",
                 app.amount, app.price_base, app.price_pow, total,
             )));
         } else {
@@ -433,7 +436,15 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
         }
         ui.separator();
         ui.label(egui::RichText::new(format!("{} CKB", app.ckb_cap)));
-        let _total_le = total.to_le_bytes();
+        if total < 1.0 {
+            ui.label("|");
+            ui.label(
+                egui::RichText::new(format!(
+                    "WARN: Total payment cannot be less than 1 Shannon!!"
+                ))
+                .color(egui::Color32::RED),
+            );
+        }
     });
 }
 
@@ -503,11 +514,11 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
             egui::RichText::new("Ensure to set CellDeps contains: ").color(egui::Color32::BROWN),
         );
         ui.label(
-            egui::RichText::new("- Original Lock's script dep").color(egui::Color32::LIGHT_YELLOW),
+            egui::RichText::new("- Original Lock's script dep").color(egui::Color32::PLACEHOLDER),
         );
         ui.label(
             egui::RichText::new("- Dex Lock's script dep(showed as bellow)")
-                .color(egui::Color32::LIGHT_YELLOW),
+                .color(egui::Color32::PLACEHOLDER),
         );
         let text = r#"{
            "out_point":{

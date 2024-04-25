@@ -439,7 +439,9 @@ fn current_encode_method(ui: &mut egui::Ui, app: &mut TemplateApp) {
         if total < 1.0 {
             ui.label("|");
             ui.label(
-                egui::RichText::new("WARN: Total payment cannot be less than 1 Shannon!!".to_string())
+                egui::RichText::new(
+                    "WARN: Total payment cannot be less than 1 Shannon!!".to_string(),
+                )
                 .color(egui::Color32::RED),
             );
         }

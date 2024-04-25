@@ -67,6 +67,10 @@ impl TemplateApp {
         self.mode = mode;
         let owner_script_hash = &args[2..34];
         self.owner_script_hash = format!("0x{}", hex::encode(owner_script_hash));
+        let price_base_bytes = [args[34], args[35], args[36], args[37]];
+        self.price_base = u32::from_le_bytes(price_base_bytes);
+        let price_pow_bytes = [args[38], args[39], args[40], args[41]];
+        self.price_pow = u32::from_le_bytes(price_pow_bytes);
         Ok(())
     }
 
@@ -439,7 +443,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
         ui.heading("Current Contract: ");
         ui.hyperlink_to(
             egui::RichText::heading("transaction".into()),
-            "https://pudge.explorer.nervos.org/transaction/0x20e4eaba5cc28607c2be8206619cd7b09ec123d2be9ddf2c75347fa52e9fc551",
+            "https://explorer.nervos.org/en/transaction/0x3884356c08232eefd183fb7673937d778054ec2c7508e3f8273b6d1f4a23b12f",
         );
     });
     ui.vertical(|ui| {
@@ -450,7 +454,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
             if ui
                 .label(
                     egui::RichText::new(
-                        "0x099bca002d01cb130cdff036859d9782a682e0b41f7cbd096f236131308dd221",
+                        "0x10d0d91b09a3ff3d6db5c6fc0dad9ba73b9a8d2d33a63b5a8f08224521d6db22",
                     )
                     .color(egui::Color32::LIGHT_GREEN)
                     .background_color(egui::Color32::BLACK),
@@ -461,7 +465,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
                 // copy code_hash
                 ui.output_mut(|o| {
                     o.copied_text =
-                        "0x099bca002d01cb130cdff036859d9782a682e0b41f7cbd096f236131308dd221"
+                        "0x10d0d91b09a3ff3d6db5c6fc0dad9ba73b9a8d2d33a63b5a8f08224521d6db22"
                             .to_owned()
                 })
             };
@@ -470,7 +474,7 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
             ui.spacing_mut().item_spacing.x = 10.0;
             ui.label(egui::RichText::new("hashType:").color(egui::Color32::LIGHT_BLUE));
             ui.label(
-                egui::RichText::new("data1")
+                egui::RichText::new("type")
                     .color(egui::Color32::LIGHT_GREEN)
                     .background_color(egui::Color32::BLACK),
             );
@@ -507,18 +511,25 @@ fn current_contract_info(ui: &mut egui::Ui, encoded_args: &str) {
         );
         let text = r#"{
            "out_point":{
-              "tx_hash":"0x20e4eaba5cc28607c2be8206619cd7b09ec123d2be9ddf2c75347fa52e9fc551",
+              "tx_hash":"0x3884356c08232eefd183fb7673937d778054ec2c7508e3f8273b6d1f4a23b12f",
               "index":"0x0"
            },
            "dep_type":"code"
 }"#;
-        ui.label(
-            egui::RichText::new(text)
-                .color(egui::Color32::LIGHT_GREEN)
-                .background_color(egui::Color32::BLACK),
-        )
-        .highlight()
-        .on_hover_text("Click to copy");
+        if ui
+            .label(
+                egui::RichText::new(text)
+                    .color(egui::Color32::LIGHT_GREEN)
+                    .background_color(egui::Color32::BLACK),
+            )
+            .highlight()
+            .on_hover_text("Click to copy")
+            .clicked()
+        {
+            ui.output_mut(|o| {
+                o.copied_text = text.to_owned();
+            });
+        };
     });
 }
 
@@ -551,9 +562,9 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     }
                     ui.label(egui::RichText::new("    - Type: <USER_DEFINED> (Should be same with original)").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
-                    ui.label(egui::RichText::new("            codeHash: 0x099bca002d01cb130cdff036859d9782a682e0b41f7cbd096f236131308dd221").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0x10d0d91b09a3ff3d6db5c6fc0dad9ba73b9a8d2d33a63b5a8f08224521d6db22").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
-                    ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            hashType: type").color(egui::Color32::LIGHT_YELLOW));
                 });
             });
             ui.separator();
@@ -569,9 +580,9 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     ui.label(egui::RichText::new("    - Capacity: N").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Type: <USER_DEFINED>").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
-                    ui.label(egui::RichText::new("            codeHash: 0x099bca002d01cb130cdff036859d9782a682e0b41f7cbd096f236131308dd221").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0x10d0d91b09a3ff3d6db5c6fc0dad9ba73b9a8d2d33a63b5a8f08224521d6db22").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
-                    ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            hashType: type").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("  <Other Cells...(Payment Input)>").color(egui::Color32::LIGHT_GREEN));
                 });
                 ui.separator();
@@ -601,9 +612,9 @@ fn how_to_build_transaction(ui: &mut egui::Ui, app: &TemplateApp) {
                     }
                     ui.label(egui::RichText::new("    - Type: <USER_DEFINED> (Should be same with original)").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("    - Lock:").color(egui::Color32::LIGHT_YELLOW));
-                    ui.label(egui::RichText::new("            codeHash: 0x099bca002d01cb130cdff036859d9782a682e0b41f7cbd096f236131308dd221").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            codeHash: 0x10d0d91b09a3ff3d6db5c6fc0dad9ba73b9a8d2d33a63b5a8f08224521d6db22").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new(format!("            args: {}", app.encoded_string)).color(egui::Color32::DEBUG_COLOR));
-                    ui.label(egui::RichText::new("            hashType: data1").color(egui::Color32::LIGHT_YELLOW));
+                    ui.label(egui::RichText::new("            hashType: type").color(egui::Color32::LIGHT_YELLOW));
                     ui.label(egui::RichText::new("  Orignal Cell:").color(egui::Color32::LIGHT_GREEN));
                     if app.mode == 0 {
                         ui.label(egui::RichText::new(format!("    - Data: 0x{}", hex::encode((app.amount as u128).to_le_bytes()))).color(egui::Color32::LIGHT_YELLOW));
@@ -635,11 +646,8 @@ fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
         ui.spacing_mut().item_spacing.x = 0.0;
         ui.label("Powered by ");
         ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/main/crates/eframe",
-        );
+        ui.label(" Written by ");
+        ui.hyperlink_to("Q Maru", "https://twitter.com/queue_maru");
         ui.label(".");
     });
 }
